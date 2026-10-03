@@ -1,2 +1,4 @@
 python-telegram-bot==22.8
 python-dotenv==1.2.3
+google-cloud-dialogflow==2.51.0
+google-cloud-api-keys==0.9.0
