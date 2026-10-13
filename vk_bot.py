@@ -28,7 +28,7 @@ def detect_intent_text(project_id, session_id, text, language_code="ru-RU"):
         request={"session": session, "query_input": query_input}
     )
 
-    return response.query_result.fulfillment_text
+    return response.query_result
 
 
 def send_message(event, vk_api, message):
@@ -52,12 +52,16 @@ def main() -> None:
 
     for event in longpoll.listen():
         if event.type == VkEventType.MESSAGE_NEW and event.to_me:
-            reply = detect_intent_text(
+            query_result = detect_intent_text(
                 project_id=project_id,
                 session_id=event.user_id,
                 text=event.text,
             )
-            send_message(event, vk_api, reply)
+
+            if query_result.intent.is_fallback:
+                continue
+            
+            send_message(event, vk_api, query_result.fulfillment_text)
 
 
 if __name__ == '__main__':
