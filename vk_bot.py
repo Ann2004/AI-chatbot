@@ -1,6 +1,7 @@
 import logging
 import os
 import random
+import time
 
 from dotenv import load_dotenv
 from google.cloud import dialogflow
@@ -9,14 +10,13 @@ from vk_api.longpoll import VkLongPoll, VkEventType
 
 
 logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
-
 logger = logging.getLogger(__name__)
 
 
 def detect_intent_text(project_id, session_id, text, language_code="ru-RU"):
-    """Send text to DialogFlow and return the agent's response."""
+    """Отправляет текст в DialogFlow и возвращает результат запроса."""
 
     session_client = dialogflow.SessionsClient()
     session = session_client.session_path(project_id, session_id)
@@ -32,7 +32,7 @@ def detect_intent_text(project_id, session_id, text, language_code="ru-RU"):
 
 
 def send_message(event, vk_api, message):
-    """Send a message to the user."""
+    """Отправляет сообщение пользователю VK."""
 
     vk_api.messages.send(
         user_id=event.user_id,
@@ -43,26 +43,33 @@ def send_message(event, vk_api, message):
 
 def main() -> None:
     load_dotenv()
-    vk_token = os.environ['VK_TOKEN']
-    project_id = os.environ['DIALOGFLOW_PROJECT_ID']
+    vk_token = os.environ["VK_TOKEN"]
+    project_id = os.environ["DIALOGFLOW_PROJECT_ID"]
 
     vk_session = vk.VkApi(token=vk_token)
     vk_api = vk_session.get_api()
     longpoll = VkLongPoll(vk_session)
 
-    for event in longpoll.listen():
-        if event.type == VkEventType.MESSAGE_NEW and event.to_me:
-            query_result = detect_intent_text(
-                project_id=project_id,
-                session_id=event.user_id,
-                text=event.text,
-            )
+    while True:
+        try:
+            for event in longpoll.listen():
+                if event.type == VkEventType.MESSAGE_NEW and event.to_me:
+                    query_result = detect_intent_text(
+                        project_id=project_id,
+                        session_id=event.user_id,
+                        text=event.text,
+                    )
 
-            if query_result.intent.is_fallback:
-                continue
-            
-            send_message(event, vk_api, query_result.fulfillment_text)
+                    if query_result.intent.is_fallback:
+                        continue
+
+                    send_message(event, vk_api, query_result.fulfillment_text)
+
+        except Exception as e:
+            logger.error("VK-бот: ошибка в цикле longpoll: %s", e, exc_info=True)
+            time.sleep(10)
+            continue
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
