@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 
@@ -41,7 +42,11 @@ def main():
     load_dotenv()
     project_id = os.environ["DIALOGFLOW_PROJECT_ID"]
 
-    with open("intents.json", "r", encoding="utf-8") as file:
+    parser = argparse.ArgumentParser(description="Загружает интенты из JSON-файла в Dialogflow.")
+    parser.add_argument("intents_filepath", help="Путь к JSON-файлу с интентами")
+    args = parser.parse_args()
+
+    with open(args.intents_filepath, "r", encoding="utf-8") as file:
         intents = json.load(file)
 
     for display_name, intent_data in intents.items():
