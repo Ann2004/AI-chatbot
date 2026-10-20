@@ -32,7 +32,7 @@ python tg_bot.py
 
 Пример бота в Телеграм - [@verbplay_dvmn_bot](https://t.me/verbplay_dvmn_bot)
 
-![ТГ-бот](files/tg_bot.gif)
+![ТГ-бот](demo_assets/tg_bot.gif)
 
 ### ВК бот
 Создайте сообщество во Вконтакте и получите API ключ сообщества.
@@ -43,7 +43,7 @@ python vk_bot.py
 
 Пример бота в ВК - https://vk.ru/club242101970
 
-![ВК-бот](files/vk_bot.png)
+![ВК-бот](demo_assets/vk_bot.png)
 
 ### Обучение DialogFlow по API
 В папке проекта создайте файл intents.json c возможными вопросами и ожидаемыми ответами для обучения DialogFlow. Пример данных:
