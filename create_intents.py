@@ -34,7 +34,7 @@ def create_intent(project_id, display_name, training_phrases_parts, message_text
         }
     )
 
-    print("Intent created: {}".format(response))
+    return response
 
 
 def main():
@@ -48,13 +48,13 @@ def main():
         training_phrases_parts = intent_data["questions"]
         message_texts = [intent_data["answer"]] 
 
-        create_intent(
+        response = create_intent(
             project_id=project_id,
             display_name=display_name,
             training_phrases_parts=training_phrases_parts,
             message_texts=message_texts,
         )
-
+        print(f"Intent created: {response}")
 
 if __name__ == "__main__":
     main()
