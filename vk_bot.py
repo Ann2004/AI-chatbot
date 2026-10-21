@@ -4,31 +4,14 @@ import random
 import time
 
 from dotenv import load_dotenv
-from google.cloud import dialogflow
 import vk_api as vk
 from vk_api.longpoll import VkLongPoll, VkEventType
 
 
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
-)
+from detect_intent_text import detect_intent_text
+
+
 logger = logging.getLogger(__name__)
-
-
-def detect_intent_text(project_id, session_id, text, language_code="ru-RU"):
-    """Отправляет текст в DialogFlow и возвращает результат запроса."""
-
-    session_client = dialogflow.SessionsClient()
-    session = session_client.session_path(project_id, session_id)
-
-    text_input = dialogflow.TextInput(text=text, language_code=language_code)
-    query_input = dialogflow.QueryInput(text=text_input)
-
-    response = session_client.detect_intent(
-        request={"session": session, "query_input": query_input}
-    )
-
-    return response.query_result
 
 
 def send_message(event, vk_api, message):
@@ -46,6 +29,8 @@ def main() -> None:
     vk_token = os.environ["VK_TOKEN"]
     project_id = os.environ["DIALOGFLOW_PROJECT_ID"]
 
+    logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
+
     vk_session = vk.VkApi(token=vk_token)
     vk_api = vk_session.get_api()
     longpoll = VkLongPoll(vk_session)
@@ -53,17 +38,19 @@ def main() -> None:
     while True:
         try:
             for event in longpoll.listen():
-                if event.type == VkEventType.MESSAGE_NEW and event.to_me:
-                    query_result = detect_intent_text(
-                        project_id=project_id,
-                        session_id=event.user_id,
-                        text=event.text,
-                    )
+                if event.type != VkEventType.MESSAGE_NEW or not event.to_me:
+                    continue
 
-                    if query_result.intent.is_fallback:
-                        continue
+                query_result = detect_intent_text(
+                    project_id=project_id,
+                    session_id=f"vk-{event.user_id}",
+                    text=event.text,
+                )
 
-                    send_message(event, vk_api, query_result.fulfillment_text)
+                if query_result.intent.is_fallback:
+                    continue
+
+                send_message(event, vk_api, query_result.fulfillment_text)
 
         except Exception as e:
             logger.error("VK-бот: ошибка в цикле longpoll: %s", e, exc_info=True)

@@ -2,15 +2,13 @@ import logging
 import os
 
 from dotenv import load_dotenv
-from google.cloud import dialogflow
 from telegram import Update
 from telegram.ext import Application, MessageHandler, filters, ContextTypes
 
 
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
-)
-logging.getLogger("httpx").setLevel(logging.WARNING)
+from detect_intent_text import detect_intent_text
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -34,27 +32,11 @@ class TelegramLogsHandler(logging.Handler):
             self.handleError(record)
 
 
-def detect_intent_text(project_id, session_id, text, language_code="ru-RU"):
-    """Отправляет текст в DialogFlow и возвращает ответ агента."""
-
-    session_client = dialogflow.SessionsClient()
-    session = session_client.session_path(project_id, session_id)
-
-    text_input = dialogflow.TextInput(text=text, language_code=language_code)
-    query_input = dialogflow.QueryInput(text=text_input)
-
-    response = session_client.detect_intent(
-        request={"session": session, "query_input": query_input}
-    )
-
-    return response.query_result.fulfillment_text
-
-
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Обрабатывает входящее сообщение через DialogFlow."""
 
     project_id = os.environ["DIALOGFLOW_PROJECT_ID"]
-    session_id = str(update.effective_chat.id)
+    session_id = f"tg-{update.effective_chat.id}"
     user_text = update.message.text
 
     try:
@@ -62,7 +44,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             project_id=project_id,
             session_id=session_id,
             text=user_text,
-        )
+        ).fulfillment_text
         await update.message.reply_text(reply)
 
     except Exception as e:
@@ -79,6 +61,9 @@ def main() -> None:
     load_dotenv()
     tg_token = os.environ["TG_TOKEN"]
     logs_chat_id = os.environ["LOGS_TG_CHAT_ID"]
+
+    logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
+    logging.getLogger("httpx").setLevel(logging.WARNING)
 
     application = Application.builder().token(tg_token).build()
 
