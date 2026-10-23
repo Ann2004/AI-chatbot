@@ -1,3 +1,4 @@
+from functools import partial
 import logging
 import os
 
@@ -32,10 +33,9 @@ class TelegramLogsHandler(logging.Handler):
             self.handleError(record)
 
 
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def handle_message(update, context, project_id) -> None:
     """Обрабатывает входящее сообщение через DialogFlow."""
 
-    project_id = os.environ["DIALOGFLOW_PROJECT_ID"]
     session_id = f"tg-{update.effective_chat.id}"
     user_text = update.message.text
 
@@ -45,22 +45,20 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             session_id=session_id,
             text=user_text,
         ).fulfillment_text
-        await update.message.reply_text(reply)
 
-    except Exception as e:
-        logger.error("TG: ошибка обработки сообщения: %s", e, exc_info=True)
-        try:
-            await update.message.reply_text(
-                "Извините, произошла ошибка. Попробуйте позже."
-            )
-        except Exception:
-            pass
+    except Exception:
+        logger.exception("TG: ошибка обработки сообщения")
+        await update.message.reply_text("Извините, произошла ошибка. Попробуйте позже.")
+        return
+
+    await update.message.reply_text(reply)
 
 
 def main() -> None:
     load_dotenv()
     tg_token = os.environ["TG_TOKEN"]
     logs_chat_id = os.environ["LOGS_TG_CHAT_ID"]
+    project_id = os.environ["DIALOGFLOW_PROJECT_ID"]
 
     logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
     logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -72,12 +70,12 @@ def main() -> None:
     telegram_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
     logger.addHandler(telegram_handler)
     
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, partial(handle_message, project_id=project_id)))
 
     try:
         application.run_polling()
-    except Exception as e:
-        logger.error("TG-бот упал с ошибкой: %s", e, exc_info=True)
+    except Exception:
+        logger.exception("TG-бот упал с ошибкой")
         raise
 
 

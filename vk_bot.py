@@ -52,8 +52,8 @@ def main() -> None:
 
                 send_message(event, vk_api, query_result.fulfillment_text)
 
-        except Exception as e:
-            logger.error("VK-бот: ошибка в цикле longpoll: %s", e, exc_info=True)
+        except Exception:
+            logger.exception("VK-бот: ошибка longpoll")
             time.sleep(10)
             continue
 
